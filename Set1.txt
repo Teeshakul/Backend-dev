@@ -1,0 +1,167 @@
+Q1: Node.js Event Loop (Easy Explanation)
+
+Node.js is single-threaded, but it can still handle many tasks at the same time using the event loop.
+
+ Think of it like a manager:
+
+It checks if any task (like API call, file read) is done
+If done → it sends the result back
+How async works:
+Task goes to background (like API call)
+Node.js continues doing other work
+When task finishes → callback/promise runs
+
+This is why Node.js is fast
+
+ Q2: Sync vs Async File Operations
+ Synchronous (Sync)
+Runs line by line
+Blocks next code until done
+const data = fs.readFileSync("file.txt");
+
+ Slow for servers
+ Asynchronous (Async)
+Runs in background
+Doesn’t block code
+const data = await fs.promises.readFile("file.txt");
+
+✔ Best for real apps
+
+👉 When to use?
+Sync → small scripts
+Async → servers, APIs (always preferred)
+Q3: Routing & Middleware in Express
+🔹 Routing
+
+Handles URL requests
+
+app.get("/home", (req, res) => {
+  res.send("Home Page");
+});
+ Middleware
+
+Runs before request reaches route
+
+app.use((req, res, next) => {
+  console.log("Request received");
+  next();
+});
+ How they work together:
+Request comes
+Middleware runs
+Then route handles response
+Q4: MongoDB Collections & Documents
+Collection
+Like a table
+ Document
+Like a row (JSON format)
+{
+  "name": "John",
+  "age": 22
+}
+🔹 Mongoose helps:
+Define schema (structure)
+Validation
+Easy queries
+const userSchema = new mongoose.Schema({
+  name: String,
+  age: Number
+});
+Q5: Authentication vs Authorization
+ Authentication (Who are you?)
+Login system
+Example: email + password
+ Authorization (What can you access?)
+Role-based access
+Example: admin vs user
+ Implementation:
+JWT tokens OR sessions
+Middleware to protect routes
+if (!req.user) return res.send("Login required");
+ Q6: Express App (Complete Solution)
+Folder Structure
+project/
+ ├── app.js
+ ├── routes/
+ │    └── dataRoutes.js
+ ├── middleware/
+ │    └── logger.js
+ ├── services/
+ │    └── fetchData.js
+ ├── data.json
+ 1. Install packages
+npm init -y
+npm install express axios
+ 2. Logger Middleware
+// middleware/logger.js
+module.exports = (req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+};
+ 3. Fetch API & Save Data
+// services/fetchData.js
+const axios = require("axios");
+const fs = require("fs");
+
+const fetchAndStore = async () => {
+  const res = await axios.get("https://jsonplaceholder.typicode.com/posts");
+  fs.writeFileSync("data.json", JSON.stringify(res.data, null, 2));
+};
+
+module.exports = fetchAndStore;
+ 4. Routes
+// routes/dataRoutes.js
+const express = require("express");
+const fs = require("fs").promises;
+const router = express.Router();
+
+// GET /data
+router.get("/data", async (req, res) => {
+  try {
+    const data = await fs.readFile("data.json", "utf-8");
+    res.json(JSON.parse(data));
+  } catch (err) {
+    res.status(500).send("Error reading file");
+  }
+});
+
+// GET /filter?userId=1
+router.get("/filter", async (req, res) => {
+  try {
+    const data = JSON.parse(await fs.readFile("data.json"));
+    const filtered = data.filter(
+      item => item.userId == req.query.userId
+    );
+    res.json(filtered);
+  } catch (err) {
+    res.status(500).send("Error filtering data");
+  }
+});
+
+module.exports = router;
+ 5. Main App
+// app.js
+const express = require("express");
+const logger = require("./middleware/logger");
+const dataRoutes = require("./routes/dataRoutes");
+const fetchAndStore = require("./services/fetchData");
+
+const app = express();
+
+// middleware
+app.use(logger);
+
+// routes
+app.use("/", dataRoutes);
+
+// error handling
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).send("Something went wrong");
+});
+
+// start server
+app.listen(3000, async () => {
+  console.log("Server running on port 3000");
+  await fetchAndStore(); // fetch API data on start
+});
